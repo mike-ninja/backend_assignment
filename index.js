@@ -6,7 +6,7 @@
 /*   By: mbarutel <mbarutel@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/02/15 14:24:10 by mbarutel          #+#    #+#             */
-/*   Updated: 2023/02/16 15:11:37 by mbarutel         ###   ########.fr       */
+/*   Updated: 2023/02/16 21:22:04 by mbarutel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@ const bodyParser = require('body-parser');
 const uuid = require('uuid');
 const app = express();
 const PORT = 8080;
+import { findBestMove } from './minimax_algo.js';
 
 app.use(bodyParser.text());
 
@@ -24,7 +25,9 @@ function createNewGame(board) {
   const game = {
     id: uuid.v4(), // Generate a new UUID for the game ID
     board: board, // Set the initial game board to a string of hyphens
-    status: 'in_progress' // Set the initial game status to "in_progress"
+    status: 'in_progress', // Set the initial game status to "in_progress"
+	champ: '-', // This is whether computer is X or O
+	enemy: '-'
   };
 
   return game;
@@ -44,13 +47,28 @@ function get_moves(board)
 	return moves;
 }
 
-function validate_board(board)
+function validate_board(board, board_param)
 {
+	var row = 0;
+	var col = 0;
+	
 	if (typeof board !== 'string' || board.length !== 9 || get_moves(board) > 1)
 		return false;
 	for (let i = 0; i < board.length; i++) 
 	{
+		if (i)
+			row = i / 3;
+		col = i % 3;
 		const char = board.charAt(i);
+		board_param[row][col] = char;
+		if ((char == 'O' || char == 'X') && board.champ == '-')
+		{
+			board.champ = char;
+			if (board.champ == 'X')
+				board.enemy = 'O';
+			else
+				board.enemy = 'X';
+		}
 		if (char != 'X' && char != 'O' && char != '-')
 			return false;
 	}
@@ -84,13 +102,18 @@ app.post('/api/v1/games', (req, res) => {
 	
 	const board = req.body
 	const new_game = createNewGame(board);
+	let board_param = [ [ '-', '-', '-' ],
+						[ '-', '-', '-' ],
+						[ '-', '-', '-' ] ];
 	
 	console.log('hello here');
 	if (!board || !validate_board(board) || !new_game) 
 		res.status(400).send({ message: 'New game not created.'})
 	else
 		games.push(new_game);
-	res.status(200).send({
+		let bestMove = findBestMove(board_param, new_game.champ);
+		new_game.board[bestMove.col * bestMove.row + 1] = new_game.champ;
+		res.status(200).send({
 		new_game: `Game at http://localhost:${PORT}/api/v1/games/${new_game.id}`,
 		board: `Board status [${new_game.board}]`,
 		incoming_board: `${board}`
