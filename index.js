@@ -49,7 +49,7 @@ function isMovesLeft(board)
 {
     for(let i = 0; i < 3; i++)
         for(let j = 0; j < 3; j++)
-            if (board[i][j] == '_')
+            if (board[i][j] == '-')
                 return true;
                  
     return false;
@@ -112,7 +112,6 @@ function evaluate(b, game)
     // won then return 0
     return 0;
 }
- 
 // This is the minimax function. It
 // considers all the possible ways
 // the game can go and returns the
@@ -120,25 +119,26 @@ function evaluate(b, game)
 function minimax(board, game, depth, isMax)
 {
     let score = evaluate(board, game);
-  
+
     // If Maximizer has won the game
     // return his/her evaluated score
     if (score == 10)
         return score;
-  
+    
     // If Minimizer has won the game
     // return his/her evaluated score
     if (score == -10)
         return score;
-  
+    
     // If there are no more moves and
     // no winner then it is a tie
     if (isMovesLeft(board) == false)
         return 0;
-  
+    
     // If this maximizer's move
-    if (isMax)
+    if (isMax) // This doesnt seem to be used
     {
+        console.log(`Checking moves for myself`)
         let best = -1000;
   
         // Traverse all cells
@@ -171,7 +171,6 @@ function minimax(board, game, depth, isMax)
     else
     {
         let best = 1000;
-  
         // Traverse all cells
         for(let i = 0; i < 3; i++)
         {
@@ -189,7 +188,7 @@ function minimax(board, game, depth, isMax)
                     // choose the minimum value
                     best = Math.min(best, minimax(board,
                                     depth + 1, !isMax));
-  
+                    //console.log(`best enemy ? ${best}`);
                     // Undo the move
                     board[i][j] = '-';
                 }
@@ -202,7 +201,7 @@ function minimax(board, game, depth, isMax)
 // This will return the best possible
 // move for the game.champ
 function findBestMove(board, game)
-{
+{ 
     let bestVal = -1000;
     let bestMove = new Move();
     bestMove.row = -1;
@@ -216,17 +215,15 @@ function findBestMove(board, game)
     {
         for(let j = 0; j < 3; j++)
         {
-             
             // Check if cell is empty
             if (board[i][j] == '-')
             {
-                 
                 // Make the move
                 board[i][j] = game.champ;
                 // compute evaluation function
                 // for this move.
                 let moveVal = minimax(board, game, 0, false);
-  
+                console.log(`row ${i} col ${j}: moveVal ${moveVal}`);
                 // Undo the move
                 board[i][j] = '-';
   
@@ -342,8 +339,8 @@ app.post('/api/v1/games', (req, res) => {
 		games.push(new_game);
 		
 		let bestMove = findBestMove(board_param, new_game);
-		var index = (bestMove.row + 1) * 3 + (bestMove.col + 1);
-		console.log(`col ${bestMove.col + 1} row ${bestMove.row + 1} ${new_game.champ} pos ${new_game.board[(bestMove.col + 1) * (bestMove.row + 1)]}`);
+		var index = (bestMove.row) * 3 + (bestMove.col);
+		console.log(`col ${bestMove.col} row ${bestMove.row} ${new_game.champ} pos ${new_game.board[(bestMove.col) * (bestMove.row)]}`);
 
 		// convert the string to an array
 		let str = new_game.board;
@@ -360,8 +357,10 @@ app.post('/api/v1/games', (req, res) => {
 		console.log(`board ${new_game.board} val ${new_game.board[(bestMove.col + 1) * (bestMove.row + 1)]}`);
 		res.status(200).send({
 		new_game: `Game at http://localhost:${PORT}/api/v1/games/${new_game.id}`,
+		incoming_board: `${board}`,
 		board: `Board status [${new_game.board}]`,
-		incoming_board: `${board}`
+        champ: `champ ${new_game.champ}`,
+        enemy: `enemy ${new_game.enemy}`,
 		});
 	}
 });
@@ -392,7 +391,7 @@ app.put('/api/v1/games/:id', (req, res) =>
 	else
 	{
 		let bestMove = findBestMove(board_param, game);
-		var index = (bestMove.row + 1) * 3 + (bestMove.col + 1);
+		var index = (bestMove.row) * 3 + (bestMove.col);
 		
 		// convert the string to an array
 		let str = board;
@@ -400,7 +399,7 @@ app.put('/api/v1/games/:id', (req, res) =>
 		let arr = str.split("");
 		
 		// update the character at index 2
-		console.log(`col ${bestMove.col + 1} row ${bestMove.row + 1} ${game.champ} pos ${game.board[(bestMove.col + 1) * (bestMove.row + 1)]}`);
+		console.log(`col ${bestMove.col} row ${bestMove.row} ${game.champ} pos ${game.board[(bestMove.col) * (bestMove.row)]}`);
 		arr[index] = game.champ;
 
 		// convert the array back to a string
