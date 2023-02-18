@@ -24,7 +24,7 @@ function createNewGame(board) {
   const game = {
     id: uuid.v4(), // Generate a new UUID for the game ID
     board: board, // Set the initial game board to a string of hyphens
-    status: 'in_progress', // Set the initial game status to "in_progress"
+    status: "RUNNING", // Set the initial game status to "in_progress"
 	champ: '-', // This is whether computer is X or O
 	enemy: '-'
   };
@@ -40,24 +40,18 @@ class Move
         let row, col;
     }
 }
- 
-// This function returns true if there are moves
-// remaining on the board. It returns false if
-// there are no moves left to play.
-//function isMovesLeft(board)
-//{
-    //for(let i = 0; i < 3; i++)
-        //for(let j = 0; j < 3; j++)
-            //if (board[i][j] == '-')
-                //return true;
-                 
-    //return false;
-//}
+
+function isMovesLeft(board)
+{
+    for(let i = 0; i < 3; i++)
+        for(let j = 0; j < 3; j++)
+            if (board[i][j] == '-')
+                return true;
+    return false;
+}
  
 function evaluate(b, game)
 {
-     
-    // Checking for Rows for X or O victory.
     for(let row = 0; row < 3; row++)
     {
         if (b[row][0] == b[row][1] &&
@@ -70,8 +64,6 @@ function evaluate(b, game)
                 return -1;
         }
     }
-  
-    // Checking for Columns for X or O victory.
     for(let col = 0; col < 3; col++)
     {
         if (b[0][col] == b[1][col] &&
@@ -84,8 +76,6 @@ function evaluate(b, game)
                 return -1;
         }
     }
-  
-    // Checking for Diagonals for X or O victory.
     if (b[0][0] == b[1][1] && b[1][1] == b[2][2])
     {
         if (b[0][0] == game.champ)
@@ -104,16 +94,11 @@ function evaluate(b, game)
         else if (b[0][2] == game.enemy)
             return -1;
     }
-  
-    // Else if none of them have
-    // won then return 0
     return 0;
 }
 
 function check_enemy_move(board, game)
 {
-    let eval = 0;
-
     for(let i = 0; i < 3; i++)
     {
         for(let j = 0; j < 3; j++)
@@ -128,16 +113,40 @@ function check_enemy_move(board, game)
             }
         }
     }
-    return eval;
+    return 0;
+}
+
+function update_game_status(board, game, move)
+{
+	board[move.row][move.col] = game.champ;
+	let ret = evaluate(board, game);
+	if (ret == 1)
+		game.status = `${game.champ}_WON`;
+	else if (ret == -1)
+		game.status = `${game.enemy}_WON`;
+	else if (ret == 0 && !isMovesLeft)
+		game.status = `DRAW`;
+
 }
  
 function findBestMove(board, game)
 { 
-    let bestVal = 0;
+    let bestVal = -1;
     let bestMove = new Move();
     bestMove.row = -1;
     bestMove.col = -1;
 
+	if (!isMovesLeft(board))
+	{
+		let ret = evaluate(board, game);
+		if (ret == 1)
+			game.status = `${game.champ}_WON`;
+		else if (ret == -1)
+			game.status = `${game.enemy}_WON`;
+		else if (ret == 0)
+			game.status = `DRAW`;
+		return ;
+	}
     console.log(`${board}`);
     for(let i = 0; i < 3; i++)
     {
@@ -145,27 +154,31 @@ function findBestMove(board, game)
         {
             if (board[i][j] == '-')
             {
+				board[i][j] = game.champ;
+				let ret = evaluate(board, game);
+				if (ret == 1)
+				{
+					bestMove.row = i;
+					bestMove.col = j;
+					update_game_status(board, game, bestMove);
+					return (bestMove);
+				}
                 let moveVal = check_enemy_move(board, game);
-                if (moveVal < bestVal)
+                if (moveVal >= bestVal)
                 {
-                    console.log(`PROTECTION row ${i} col ${j} moveVal ${moveVal}`);
+					bestVal = moveVal;
+					console.log(`moveVal ${moveVal}`);
                     bestMove.row = i;
                     bestMove.col = j;
                 }
-                board[i][j] = game.champ;
-                let ret = evaluate(board, game);
-                board[i][j] = '-';
-                if (ret == 1 || bestVal == 0)
-                {
-                    console.log(`FOR WIN row ${i} col ${j} moveVal ${ret}`);
-                    bestMove.row = i;
-                    bestMove.col = j;
-                }
+				board[i][j] = '-';
             }
         }
     }
+	update_game_status(board, game, bestMove);
     return bestMove;
 }
+
 //-------------------------------------------------------------------------------------------------------------
 
 function get_moves(board, board_param)
@@ -221,6 +234,11 @@ function validate_board(board, board_param, game)
 		if (char != 'X' && char != 'O' && char != '-')
 			return false;
 	}
+	if (game.champ == '-' && game.enemy == '-')
+	{
+		game.champ = 'X';
+		game.enemy = 'O';
+	}
 	return true;
 }
 
@@ -231,12 +249,14 @@ function validate_move(old_board, new_board, board_param)
 	
 	if (new_board_moves - old_board_moves != 1)
 		return false;
-	return true;
+	else
+		return true;
 }
 
+//-------------------------------------------------------------------------------------------------------------
+
 app.get('/', (req, res) => {
-	const message = 'Welcome to my server!'; // Greeting message
-	
+	const message = 'Welcome to my Tic Tac Toe server!'; // Greeting message
 	res.setHeader('Content-Type', 'text/plain');
 	res.end(message);
 });
@@ -257,32 +277,17 @@ app.post('/api/v1/games', (req, res) => {
 						[ '-', '-', '-' ] ];
 	
 	if (!board || !validate_board(board, board_param, new_game) || !new_game)
-    {
 		res.status(400).send({ message: 'New game not created.'});
-
-    }
 	else
 	{
 		games.push(new_game);
-		
 		let bestMove = findBestMove(board_param, new_game);
 		var index = (bestMove.row) * 3 + (bestMove.col);
-		//console.log(`col ${bestMove.col} row ${bestMove.row} ${new_game.champ} pos ${new_game.board[(bestMove.col) * (bestMove.row)]}`);
-
-		// convert the string to an array
 		let str = new_game.board;
-
 		let arr = str.split("");
-
-		// update the character at index 2
 		arr[index] = new_game.champ;
-
-		// convert the array back to a string
 		str = arr.join("");
 		new_game.board = str;
-
-		//console.log(`board ${new_game.board} val ${new_game.board[(bestMove.col + 1) * (bestMove.row + 1)]}`);
-		
 		res.status(200).send({
 		new_game: `Game at http://localhost:${PORT}/api/v1/games/${new_game.id}`,
 		board: `Board status [${new_game.board}]`,
@@ -315,22 +320,21 @@ app.put('/api/v1/games/:id', (req, res) =>
 		res.end(`Invalid move`);
 	else
 	{
-		let bestMove = findBestMove(board_param, game);
-		var index = (bestMove.row) * 3 + (bestMove.col);
-		
-		// convert the string to an array
-		let str = board;
-		
-		let arr = str.split("");
-		
-		// update the character at index 2
-		//console.log(`col ${bestMove.col} row ${bestMove.row} ${game.champ} pos ${game.board[(bestMove.col) * (bestMove.row)]}`);
-		arr[index] = game.champ;
-
-		// convert the array back to a string
-		str = arr.join("");
-		game.board = str;
-		console.log(`${game.board}`);
+		if (game.status == "RUNNING")
+		{
+			let bestMove = findBestMove(board_param, game);
+			if (game.status == "RUNNING" || game.status == `${game.champ}_WON`)
+			{
+				var index = (bestMove.row) * 3 + (bestMove.col);
+				let str = board;
+				let arr = str.split("");
+				arr[index] = game.champ;
+				str = arr.join("");
+				game.board = str;
+			}
+			else
+				game.board = board;
+		}
 		res.status(200).send(game);
 	}
 });
