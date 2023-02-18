@@ -32,15 +32,25 @@ function createNewGame(board) {
   return game;
 }
 
-//-------------------------------------------------------------------------------------------------------------
 class Move
 {
     constructor()
     {
-        let row, col;
+        let row;
+		let col;
     }
 }
 
+//-------------------------------------------------------------------------------------------------------------
+
+
+
+/**
+ * If there is a move left, return true, else return false
+ * 
+ * @param board - The current state of the board.
+ * @returns true if there are moves left, false otherwise
+ */
 function isMovesLeft(board)
 {
     for(let i = 0; i < 3; i++)
@@ -50,8 +60,16 @@ function isMovesLeft(board)
     return false;
 }
  
+/**
+ * It checks if the game has been won by the champion or the enemy
+ * 
+ * @param b - The board
+ * @param game - The game object
+ * @returns 0 if no winner, +1 if champ won, -1 if enemy won.
+ */
 function evaluate(b, game)
 {
+	// Checking horizontally
     for(let row = 0; row < 3; row++)
     {
         if (b[row][0] == b[row][1] &&
@@ -64,6 +82,7 @@ function evaluate(b, game)
                 return -1;
         }
     }
+	// Checking vertically
     for(let col = 0; col < 3; col++)
     {
         if (b[0][col] == b[1][col] &&
@@ -76,7 +95,8 @@ function evaluate(b, game)
                 return -1;
         }
     }
-    if (b[0][0] == b[1][1] && b[1][1] == b[2][2])
+	// Checking diagonally left to right
+	if (b[0][0] == b[1][1] && b[1][1] == b[2][2])
     {
         if (b[0][0] == game.champ)
             return +1;
@@ -84,7 +104,7 @@ function evaluate(b, game)
         else if (b[0][0] == game.enemy)
             return -1;
     }
-  
+	// Checking diagonally right to left
     if (b[0][2] == b[1][1] &&
         b[1][1] == b[2][0])
     {
@@ -97,8 +117,15 @@ function evaluate(b, game)
     return 0;
 }
 
+/**
+ * It checks if the enemy can win in the next move.
+ * @param board - The current state of the board.
+ * @param game - The game object
+ * @returns The best move for the enemy.
+ */
 function check_enemy_move(board, game)
 {
+	let lowest_val = 0;
     for(let i = 0; i < 3; i++)
     {
         for(let j = 0; j < 3; j++)
@@ -108,14 +135,21 @@ function check_enemy_move(board, game)
                 board[i][j] = game.enemy;
                 let best = evaluate(board, game);
                 board[i][j] = '-';
-                if (best == 1 || best == -1)
-                    return best;
+				if (best < lowest_val)
+					lowest_val = best;
             }
         }
     }
-    return 0;
+    return lowest_val;
 }
 
+/**
+ * It updates the game status based on the current board and the move made.
+ * 
+ * @param board - The current state of the board.
+ * @param game - This is the game object.
+ * @param move - The move that the player has made.
+ */
 function update_game_status(board, game, move)
 {
 	board[move.row][move.col] = game.champ;
@@ -126,16 +160,42 @@ function update_game_status(board, game, move)
 		game.status = `${game.enemy}_WON`;
 	else if (ret == 0 && !isMovesLeft)
 		game.status = "DRAW";
+}
 
+function random_move(board, move)
+{
+	const max = 2;
+	const min = 0;
+	while (true)
+	{
+		let rand_row = Math.floor(Math.random() * (max - min + 1)) + min;
+		let rand_col = Math.floor(Math.random() * (max - min + 1)) + min;
+		console.log(`row ${rand_row} col ${rand_col}`);
+		if (board[rand_row][rand_col] == '-')
+		{
+			move.row = rand_row;
+			move.col = rand_col;
+			return (move);
+		}
+	}
 }
  
+/**
+ * It checks if the game is over, if not, it checks all the possible moves and returns the best move.
+ * Will priotitize getting a move value of either +1 or 0 whilst avoiding -1.
+ * 
+ * @param board - The current state of the board.
+ * @param game - The game object
+ * @returns The best move for the AI to make.
+ */
 function findBestMove(board, game)
 { 
     let bestVal = -1;
+	let	randomizer = true;
     let best_move = new Move();
-    best_move.row = -1;
-    best_move.col = -1;
 
+	best_move.row = -1;
+    best_move.col = -1;
 	if (!isMovesLeft(board))
 	{
 		let ret = evaluate(board, game);
@@ -163,6 +223,8 @@ function findBestMove(board, game)
 					return (best_move);
 				}
                 let moveVal = check_enemy_move(board, game);
+				if (moveVal == -1)
+					randomizer = false;
                 if (moveVal >= bestVal)
                 {
 					bestVal = moveVal;
@@ -173,12 +235,22 @@ function findBestMove(board, game)
             }
         }
     }
+	console.log(` best val ${bestVal}`);
+	if (randomizer)
+		best_move = random_move(board, best_move);
 	update_game_status(board, game, best_move);
     return best_move;
 }
 
 //-------------------------------------------------------------------------------------------------------------
 
+/**
+ * Checks the board and returns the number of moves that have been made.
+ * 
+ * @param board - The current state of the game board.
+ * @param board_param - This is a 2D array that will be used to store the board.
+ * @returns The number of moves made on the board.
+ */
 function get_moves(board, board_param)
 {
 	var moves = 0;
@@ -205,13 +277,25 @@ function get_moves(board, board_param)
 	return moves;
 }
 
+/**
+ * It takes a string, checks if it's a valid board, and if it is, it returns 0, otherwise it returns an
+ * error message. At the same time it populates board_param.
+ * 
+ * @param board - The current state of the board.
+ * @param board_param - The current board state in a 2D array
+ * @param game - This is the object that contains the game state.
+ * @returns 0 is the board is valid. Otherwise, return an error message.
+ */
 function validate_board(board, board_param, game)
 {
 	var 	row = 0;
 	var 	col = 0;
 	
 	if (typeof board !== 'string' || board.length !== 9 || get_moves(board) > 1)
-		return false;
+	{
+		let err_msg = `board is in incorrect format`;
+		return (err_msg); 
+	}
 	for (let i = 0; i < board.length; i++) 
 	{
 		if (i)
@@ -243,28 +327,54 @@ function validate_board(board, board_param, game)
 	return 0;
 }
 
+/**
+ * It checks if the number of moves in the new board is one more 
+ * than the number of moves in the old board.
+ * 
+ * @param old_board - The board before the move was made.
+ * @param new_board - The board after the move has been made.
+ * @param board_param - The current board state in a 2D array
+ * @returns true if valid amount of moves were made, false otherwise.
+ */
 function validate_move(old_board, new_board, board_param)
 {
 	const old_board_moves = get_moves(old_board, 0);
 	const new_board_moves = get_moves(new_board, board_param);
 	
-	if (new_board_moves - old_board_moves != 1)
-		return false;
-	else
+	for (let i = 0; i < new_board.length; i++) 
+	{
+		const char = new_board.charAt(i);
+		if (char != 'X' && char != 'O' && char != '-')
+			return false;
+	}
+	if ((new_board_moves - old_board_moves) == 1)
 		return true;
+	else
+		return false;
 }
 
-//-------------------------------------------------------------------------------------------------------------
-
+/**
+ * Push game object into array, find the best move, and then updates the board with
+ * the best move.
+ * 
+ * @param game - The game object that contains the board
+ * @param board_param - The current board state in a 2D array
+ */
 function start_game(game, board_param)
 {
 	games.push(game);
 	let best_move = findBestMove(board_param, game);
 	let index = (best_move.row) * 3 + (best_move.col);
+	console.log(`index ${index} champ ${game.champ}`);
 	let arr = game.board.split("");
 	arr[index] = game.champ;
 	game.board = arr.join("");
+	console.log(`row ${game.board}`);
 }
+
+//-------------------------------------------------------------------------------------------------------------
+
+
 
 app.get('/', (req, res) => {
 	const message = "Welcome to mbarutel's Tic Tac Toe server!"; // Greeting message
@@ -346,7 +456,7 @@ app.put('/api/v1/games/:id', (req, res) =>
 	game = games.find(game => game.id === id);
 	if (!game)
 		res.status(404).send({ reason: "resource not found."});
-	else if (!validate_move(game.board, board, board_param))
+	else if (game.status == "RUNNING" && !validate_move(game.board, board, board_param))
 		res.status(400).send({ reason: "bad request."});
 	else
 	{
