@@ -26,7 +26,8 @@ function createNewGame(board) {
     board: board, // Set the initial game board to a string of hyphens
     status: "RUNNING", // Set the initial game status to "in_progress"
 	champ: '-', // This is whether computer is X or O
-	enemy: '-'
+	enemy: '-',
+	first_move: false
   };
 
   return game;
@@ -311,6 +312,7 @@ function validate_board(board, board_param, game)
 	}
 	if (game.champ == '-' && game.enemy == '-')
 	{
+		game.first_move = true;
 		game.champ = 'X';
 		game.enemy = 'O';
 	}
@@ -333,6 +335,11 @@ function validate_move(new_board, board_param, game)
 	let		champ_moves = 0;
 	let		enemy_moves = 0;
 	
+	if (typeof new_board !== 'string' || new_board.length !== 9)
+	{
+		let err_msg = `board is in incorrect format`;
+		return (err_msg); 
+	}
 	for (let i = 0; i < new_board.length; i++) 
 	{
 		const char = new_board.charAt(i);
@@ -347,12 +354,20 @@ function validate_move(new_board, board_param, game)
 		else if (char == game.enemy)
 			enemy_moves++;
 		if (char != 'X' && char != 'O' && char != '-')
-			return false;
+		{
+			let err_msg = `Incorrect character -> ${char}`;
+			return (err_msg); 
+		}
 	}
-	if ((enemy_moves - champ_moves) == 1)
-		return true;
+	if (game.first_move && enemy_moves == champ_moves)
+		return (0);
+	else if (!game.first_move && (enemy_moves - champ_moves) == 1)
+		return (0);
 	else
-		return false;
+	{
+		let err_msg = `Incorrect moves`;
+		return (err_msg); 
+	}
 }
 
 /**
@@ -456,8 +471,14 @@ app.put('/api/v1/games/:id', (req, res) =>
 	game = games.find(game => game.id === id);
 	if (!game)
 		res.status(404).send({ reason: "resource not found."});
-	else if (game.status == "RUNNING" && !validate_move(board, board_param, game))
-		res.status(400).send({ reason: "bad request."});
+	let err_msg = validate_move(board, board_param, game);
+	if (game.status == "RUNNING" && err_msg)
+	{
+		res.status(400).send({ 
+			reason: "bad request.",
+			message: `${err_msg}`
+		});
+	}
 	else
 	{
 		if (game.status == "RUNNING")
