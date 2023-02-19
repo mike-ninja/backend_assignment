@@ -6,7 +6,7 @@
 /*   By: mbarutel <mbarutel@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/02/15 14:24:10 by mbarutel          #+#    #+#             */
-/*   Updated: 2023/02/16 21:54:40y mbarutel         ###   ########.fr       */
+/*   Updated: 2023/02/19 15:46:09 by mbarutel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,19 +20,25 @@ app.use(bodyParser.text());
 
 const games = [];
 
+/**
+ * Creates a new game object.
+ * 
+ * @param board - board from request
+ * @returns The new game object.
+ */
 function createNewGame(board) {
   const game = {
-    id: uuid.v4(), // Generate a new UUID for the game ID
-    board: board, // Set the initial game board to a string of hyphens
-    status: "RUNNING", // Set the initial game status to "in_progress"
-	champ: '-', // This is whether computer is X or O
+    id: uuid.v4(),
+    board: board,
+    status: "RUNNING",
+	champ: '-',
 	enemy: '-',
 	first_move: false
   };
-
   return game;
 }
 
+/* A Move object has a row and a column. */
 class Move
 {
     constructor()
@@ -167,6 +173,14 @@ function update_game_status(board, game, move)
 		game.status = "DRAW";
 }
 
+/**
+ * It generates a random number between 0 and 2, and then checks if the board at that position is
+ * empty. If it is, it returns the move. If it isn't, it generates another random number and checks
+ * again
+ * @param board - a 2D array of the current state of the board.
+ * @param move - This is the move object that you'll be returning. It has two properties: row and col.
+ * @returns The move object is being returned.
+ */
 function random_move(board, move)
 {
 	const max = 2;
@@ -240,7 +254,6 @@ function findBestMove(board, game)
             }
         }
     }
-	console.log(` best val ${bestVal}`);
 	if (randomizer)
 		best_move = random_move(board, best_move);
 	update_game_status(board, game, best_move);
@@ -269,8 +282,8 @@ function get_moves(board)
 }
 
 /**
- * It takes a string, checks if it's a valid board, and if it is, it returns 0, otherwise it returns an
- * error message. At the same time it populates board_param.
+ * It takes a string, checks if it's a valid board, and if it is, it returns 0, 
+ * otherwise it returns an error message. At the same time it populates board_param.
  * 
  * @param board - The current state of the board.
  * @param board_param - The current board state in a 2D array
@@ -484,7 +497,8 @@ app.put('/api/v1/games/:id', (req, res) =>
 		if (game.status == "RUNNING")
 		{
 			let best_move = findBestMove(board_param, game);
-			if (game.status == "RUNNING" || game.status == `${game.champ}_WON` || (game.status == "DRAW" && best_move.row != -1 && best_move.col != -1))
+			if (game.status == "RUNNING" || game.status == `${game.champ}_WON` 
+			|| (game.status == "DRAW" && best_move.row != -1 && best_move.col != -1))
 			{
 				let index = (best_move.row) * 3 + (best_move.col);
 				let arr = board.split("");
