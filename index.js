@@ -482,6 +482,29 @@ app.put('/api/v1/games/:id', (req, res) =>
 	}
 });
 
+app.delete('/api/v1/games/:id', (req, res) =>
+{
+	var 	game;
+	const 	id = req.params.id;
+
+	if (!id)
+		res.status(400).send({ reason: "bad request."});
+	game = games.find(game => game.id === id);
+	if (!game)
+		res.status(404).send({ reason: "resource not found."});
+	else
+	{
+		const	id_to_delete = game.id;
+		const	index_to_delete = games.findIndex(obj => obj.id == id_to_delete);
+
+		if (index_to_delete > -1)
+			games.splice(index_to_delete, 1);
+		res.status(200).send({ 
+			message: "Game succesfully deleted"
+		});
+	}
+});
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send("Internal server error");
