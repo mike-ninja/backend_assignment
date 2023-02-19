@@ -43,8 +43,6 @@ class Move
 
 //-------------------------------------------------------------------------------------------------------------
 
-
-
 /**
  * If there is a move left, return true, else return false
  * 
@@ -54,9 +52,13 @@ class Move
 function isMovesLeft(board)
 {
     for(let i = 0; i < 3; i++)
-        for(let j = 0; j < 3; j++)
-            if (board[i][j] == '-')
-                return true;
+	{
+		for(let j = 0; j < 3; j++)
+		{
+			if (board[i][j] == '-')
+			return true;
+		}
+	}
     return false;
 }
  
@@ -154,11 +156,13 @@ function update_game_status(board, game, move)
 {
 	board[move.row][move.col] = game.champ;
 	let ret = evaluate(board, game);
+	console.log(`ret ${ret} pos ${board[move.row][move.col]} row ${move.row} col ${move.col}`);
+	console.log(`board ${board}`);
 	if (ret == 1)
 		game.status = `${game.champ}_WON`;
 	else if (ret == -1)
 		game.status = `${game.enemy}_WON`;
-	else if (ret == 0 && !isMovesLeft)
+	else if (ret == 0 && !isMovesLeft(board))
 		game.status = "DRAW";
 }
 
@@ -205,7 +209,7 @@ function findBestMove(board, game)
 			game.status = `${game.enemy}_WON`;
 		else if (ret == 0)
 			game.status = "DRAW";
-		return ;
+		return (best_move);
 	}
     for(let i = 0; i < 3; i++)
     {
@@ -239,7 +243,7 @@ function findBestMove(board, game)
 	if (randomizer)
 		best_move = random_move(board, best_move);
 	update_game_status(board, game, best_move);
-    return best_move;
+    return (best_move);
 }
 
 //-------------------------------------------------------------------------------------------------------------
@@ -251,30 +255,16 @@ function findBestMove(board, game)
  * @param board_param - This is a 2D array that will be used to store the board.
  * @returns The number of moves made on the board.
  */
-function get_moves(board, board_param)
+function get_moves(board)
 {
 	var moves = 0;
-	var row = 0;
-	var col = 0;
-	
 	
 	for (let i = 0; i < board.length; i++) 
 	{
 		const char = board.charAt(i);
-		if (board_param)
-		{
-			if (i)
-			{
-				row = Math.floor(i / 3);
-				col = i % 3;
-			}
-			const char = board.charAt(i);
-			board_param[row][col] = char;
-		}
 		if (char == 'X' || char == 'O')
 			++moves;
-	}
-	return moves;
+	}	return moves;
 }
 
 /**
@@ -336,18 +326,30 @@ function validate_board(board, board_param, game)
  * @param board_param - The current board state in a 2D array
  * @returns true if valid amount of moves were made, false otherwise.
  */
-function validate_move(old_board, new_board, board_param)
+function validate_move(new_board, board_param, game)
 {
-	const old_board_moves = get_moves(old_board, 0);
-	const new_board_moves = get_moves(new_board, board_param);
+	let		row = 0;
+	let		col = 0;
+	let		champ_moves = 0;
+	let		enemy_moves = 0;
 	
 	for (let i = 0; i < new_board.length; i++) 
 	{
 		const char = new_board.charAt(i);
+		if (i)
+		{
+			row = Math.floor(i / 3);
+			col = i % 3;
+		}
+		board_param[row][col] = char;
+		if (char == game.champ)
+			champ_moves++;
+		else if (char == game.enemy)
+			enemy_moves++;
 		if (char != 'X' && char != 'O' && char != '-')
 			return false;
 	}
-	if ((new_board_moves - old_board_moves) == 1)
+	if ((enemy_moves - champ_moves) == 1)
 		return true;
 	else
 		return false;
@@ -432,13 +434,11 @@ app.get('/api/v1/games/:id', (req, res) =>
 		res.status(404).send({ reason: "resource not found."});
 	else
 	{
-		const game_array = games.map(obj => {
-			return { id: obj.id, board: obj.board, status: obj.status }
+		res.status(200).send({
+			id: game.id,
+			board: game.board,
+			status: game.status
 		});
-		if (!game_array)
-			res.status(404).send({ message: "resource not found." });
-		else
-			res.status(200).send({ game_array });
 	}
 });
 
@@ -456,14 +456,14 @@ app.put('/api/v1/games/:id', (req, res) =>
 	game = games.find(game => game.id === id);
 	if (!game)
 		res.status(404).send({ reason: "resource not found."});
-	else if (game.status == "RUNNING" && !validate_move(game.board, board, board_param))
+	else if (game.status == "RUNNING" && !validate_move(board, board_param, game))
 		res.status(400).send({ reason: "bad request."});
 	else
 	{
 		if (game.status == "RUNNING")
 		{
 			let best_move = findBestMove(board_param, game);
-			if (game.status == "RUNNING" || game.status == `${game.champ}_WON`)
+			if (game.status == "RUNNING" || game.status == `${game.champ}_WON` || (game.status == "DRAW" && best_move.row != -1 && best_move.col != -1))
 			{
 				let index = (best_move.row) * 3 + (best_move.col);
 				let arr = board.split("");
