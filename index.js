@@ -6,7 +6,7 @@
 /*   By: mbarutel <mbarutel@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/02/15 14:24:10 by mbarutel          #+#    #+#             */
-/*   Updated: 2023/02/19 15:46:09 by mbarutel         ###   ########.fr       */
+/*   Updated: 2023/02/20 11:07:17 by mbarutel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ const PORT = 8080;
 
 app.use(bodyParser.text());
 
-const games = [];
+const games = []; // Array of games
 
 /**
  * Creates a new game object.
@@ -48,7 +48,7 @@ class Move
     }
 }
 
-//-------------------------------------------------------------------------------------------------------------
+/*								Algorithm								 */
 
 /**
  * If there is a move left, return true, else return false
@@ -260,7 +260,7 @@ function findBestMove(board, game)
     return (best_move);
 }
 
-//-------------------------------------------------------------------------------------------------------------
+/*								UTILS								 */
 
 /**
  * Checks the board and returns the number of moves that have been made.
@@ -402,12 +402,10 @@ function start_game(game, board_param)
 	console.log(`row ${game.board}`);
 }
 
-//-------------------------------------------------------------------------------------------------------------
-
-
+/*								Endpoint Handlers						 */
 
 app.get('/', (req, res) => {
-	const message = "Welcome to mbarutel's Tic Tac Toe server!"; // Greeting message
+	const message = "Welcome to mbarutel's Tic Tac Toe server!";
 	res.setHeader('Content-Type', 'text/plain');
 	res.end(message);
 	res.status(200);
